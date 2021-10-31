@@ -37,8 +37,8 @@ run :: Program -> IO String
 run program = do
   co <- runStateT (runExceptT (compileProgram program)) initEnv
   case fst co of
-    (Left e) -> return "Error"
-    (Right r) -> return (show $ fst co)
+    (Left e) -> return $ "Error" ++ e
+    (Right r) -> return (snd r)
 
 compileProgram :: Program -> Compl Val
 compileProgram (Prog stmts) = compileStmts stmts
@@ -63,12 +63,31 @@ compileStmt (SAss ident exp) = do
       put newEnv
       return newLoc
   -- TODO: asm result text --
-  return (expStackSize, expResult ++ "iload cos tam (asm)")
+  return (expStackSize, expResult ++ "store " ++ show newLoc ++ "\n")
 compileStmt (SExp exp) = do
   (expStackSize, expResult) <- compileExp exp
+  --   (printStackSize,printResult) <- printStream
   -- TODO: Print expr --
   return (0, "expr")
 
+printStream :: Compl Val
+printStream = do return (0, "")
+
 -- TODO: --
 compileExp :: Exp -> Compl Val
-compileExp e = do return (0, "expr")
+compileExp (ExpLit num) = do return (0, "iconst " ++ show num ++ "\n")
+compileExp (ExpAdd e1 e2) = compileBinExp e1 e2 "iadd"
+compileExp (ExpSub e1 e2) = compileBinExp e1 e2 "isub"
+compileExp (ExpMul e1 e2) = compileBinExp e1 e2 "imul"
+compileExp (ExpDiv e1 e2) = compileBinExp e1 e2 "idiv"
+compileExp (ExpVar ident) = do
+  env <- get
+  case Map.lookup ident env of
+    (Just loc) -> return (0, "iload " ++ show loc ++ "\n")
+    Nothing -> throwError "No such ident"
+
+compileBinExp :: Exp -> Exp -> String -> Compl Val
+compileBinExp e1 e2 s = do
+  (stackSize1, result1) <- compileExp e1
+  (stackSize2, result2) <- compileExp e2
+  return (max (stackSize1 + 1) stackSize2, result1 ++ result2 ++ "iadd\n")
