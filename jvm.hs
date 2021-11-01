@@ -19,18 +19,17 @@ main = do
       code <- readFile filename
       let tokens = myLexer code
       let outputPath = replaceExtension filename ".j"
+      let outputDir = takeDirectory outputPath
       let programName = dropExtension $ takeFileName filename
 
       case pProgram tokens of
         Right program -> do
           result <- run program programName
-
-          writeFile (programName ++ ".j") result
-          processHandle <- runCommand ("java -jar ./lib/jasmin-2.4/jasmin.jar " ++ programName ++ ".j")
+          writeFile (outputDir ++ "/" ++ programName ++ ".j") result
+          processHandle <- runCommand ("java -jar  ./lib/jasmin-2.4/jasmin.jar " ++ outputPath ++ " -d " ++ outputDir)
           waitForProcess processHandle
-          putStrLn "Compiled\n"
+          putStrLn $ "Compiled: " ++ outputPath
         Left err -> do
           putStr ("Error while parsing:" ++ err)
-
       return ()
     _ -> putStr "<Help>\n"
