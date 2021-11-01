@@ -33,12 +33,33 @@ type Loc = Int
 initEnv :: Env
 initEnv = Map.empty
 
-run :: Program -> IO String
-run program = do
-  co <- runStateT (runExceptT (compileProgram program)) initEnv
+run :: Program -> String -> IO String
+run program programName = do
+  co <- runStateT (runExceptT (compileProgram program)) $ Map.insert (Ident "") 0 initEnv
+  let localsLimit = max 1 $ Map.size (snd co)
   case fst co of
     (Left e) -> return $ "Error" ++ e
-    (Right r) -> return (snd r)
+    (Right r) ->
+      return
+        ( ".class public " ++ programName ++ "\n"
+            ++ ".super java/lang/Object\n"
+            ++ "; standard initializer\n"
+            ++ ".method public <init>()V\n"
+            ++ "    aload_0\n"
+            ++ "    invokespecial java/lang/Object/<init>()V\n"
+            ++ "    return\n"
+            ++ ".end method\n"
+            ++ ".method public static main([Ljava/lang/String;)V\n"
+            ++ ".limit stack "
+            ++ show (fst r)
+            ++ "\n"
+            ++ ".limit locals "
+            ++ show localsLimit
+            ++ "\n"
+            ++ snd r
+            ++ "return\n"
+            ++ ".end method\n"
+        )
 
 compileProgram :: Program -> Compl Val
 compileProgram (Prog stmts) = compileStmts stmts
@@ -62,20 +83,28 @@ compileStmt (SAss ident exp) = do
       let newEnv = Map.insert ident newLoc env
       put newEnv
       return newLoc
-  -- TODO: asm result text --
-  return (expStackSize, expResult ++ "store " ++ show newLoc ++ "\n")
+  return (expStackSize, expResult ++ "istore_" ++ show newLoc ++ "\n")
 compileStmt (SExp exp) = do
   (expStackSize, expResult) <- compileExp exp
-  --   (printStackSize,printResult) <- printStream
-  -- TODO: Print expr --
-  return (0, "expr")
+  (printStackSize, printResult) <- printStream
+  return (max expStackSize printStackSize, expResult ++ printResult)
 
 printStream :: Compl Val
-printStream = do return (0, "")
+printStream = do
+  return
+    ( 2,
+      "getstatic java/lang/System/out Ljava/io/PrintStream;\n"
+        ++ "swap\n"
+        ++ "invokevirtual java/io/PrintStream/println(I)V\n"
+    )
 
--- TODO: --
 compileExp :: Exp -> Compl Val
-compileExp (ExpLit num) = do return (0, "iconst " ++ show num ++ "\n")
+compileExp (ExpLit num)
+  | num == -1 = do return (1, "iconst_m1" ++ "\n")
+  | num >= 0 && num < 6 = do return (1, "iconst_" ++ show num ++ "\n")
+  | num >= -128 && num < 128 = do return (1, "bipush " ++ show num ++ "\n")
+  | num >= -32768 && num < 32768 = do return (1, "sipush " ++ show num ++ "\n")
+  | otherwise = do return (1, "ldc " ++ show num ++ "\n")
 compileExp (ExpAdd e1 e2) = compileBinExp e1 e2 "iadd"
 compileExp (ExpSub e1 e2) = compileBinExp e1 e2 "isub"
 compileExp (ExpMul e1 e2) = compileBinExp e1 e2 "imul"
@@ -83,11 +112,12 @@ compileExp (ExpDiv e1 e2) = compileBinExp e1 e2 "idiv"
 compileExp (ExpVar ident) = do
   env <- get
   case Map.lookup ident env of
-    (Just loc) -> return (0, "iload " ++ show loc ++ "\n")
+    (Just loc) -> return (1, "iload " ++ show loc ++ "\n")
     Nothing -> throwError "No such ident"
 
 compileBinExp :: Exp -> Exp -> String -> Compl Val
 compileBinExp e1 e2 s = do
   (stackSize1, result1) <- compileExp e1
   (stackSize2, result2) <- compileExp e2
-  return (max (stackSize1 + 1) stackSize2, result1 ++ result2 ++ "iadd\n")
+  -- Wykonuje pierwsza, zostawiam wynik (+1) wykonuje druga
+  return (max stackSize1 (stackSize2 + 1), result1 ++ result2 ++ s ++ "\n")
