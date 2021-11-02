@@ -1,0 +1,9 @@
+InstantParser/*.o
+InstantParser/*.hi
+InstantParser/*.y
+InstantParser/*.x
+InstantParser/*.txt
+InstantParser/*.info
+*.hi
+*.o
+*.bak
