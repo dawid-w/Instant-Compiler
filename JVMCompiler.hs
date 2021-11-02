@@ -1,12 +1,5 @@
 module JVMCompiler where
 
--- import Control.Monad.Except
--- import Control.Monad.State
--- import Control.Monad.Except
--- import Control.Monad.State
-
--- import Data.Text.Internal.Encoding.Fusion (restreamUtf16LE)
-
 import Control.Monad.Except
 import Control.Monad.State
 import Data.List.NonEmpty (inits)
@@ -83,25 +76,23 @@ compileStmt (SAss ident exp) = do
       let newEnv = Map.insert ident newLoc env
       put newEnv
       return newLoc
-  return (expStackSize, expResult ++ "istore_" ++ show newLoc ++ "\n")
+  return (expStackSize, expResult ++ genStoreInstr newLoc)
 compileStmt (SExp exp) = do
   (expStackSize, expResult) <- compileExp exp
-  (printStackSize, printResult) <- printStream
-  return (max expStackSize printStackSize, expResult ++ printResult)
+  return (expStackSize + 1, genPrintResult expResult)
 
-printStream :: Compl Val
-printStream = do
-  return
-    ( 2,
-      "getstatic java/lang/System/out Ljava/io/PrintStream;\n"
-        ++ "swap\n"
-        ++ "invokevirtual java/io/PrintStream/println(I)V\n"
-    )
+genStoreInstr :: Loc -> String
+genStoreInstr loc
+  | loc >= 0 && loc <= 3 = "istore_" ++ show loc ++ "\n"
+  | otherwise = "istore " ++ show loc ++ "\n"
+
+genPrintResult :: String -> String
+genPrintResult expResult = "getstatic java/lang/System/out Ljava/io/PrintStream;\n" ++ expResult ++ "invokevirtual java/io/PrintStream/println(I)V\n"
 
 compileExp :: Exp -> Compl Val
 compileExp (ExpLit num)
+  | num >= 0 && num <= 5 = do return (1, "iconst_" ++ show num ++ "\n")
   | num == -1 = do return (1, "iconst_m1" ++ "\n")
-  | num >= 0 && num < 6 = do return (1, "iconst_" ++ show num ++ "\n")
   | num >= -128 && num < 128 = do return (1, "bipush " ++ show num ++ "\n")
   | num >= -32768 && num < 32768 = do return (1, "sipush " ++ show num ++ "\n")
   | otherwise = do return (1, "ldc " ++ show num ++ "\n")
@@ -112,8 +103,13 @@ compileExp (ExpDiv e1 e2) = compileBinExp e1 e2 "idiv"
 compileExp (ExpVar ident) = do
   env <- get
   case Map.lookup ident env of
-    (Just loc) -> return (1, "iload " ++ show loc ++ "\n")
+    (Just loc) -> return (1, genLoadInstr loc)
     Nothing -> throwError "No such ident"
+
+genLoadInstr :: Loc -> String
+genLoadInstr loc
+  | loc >= 0 && loc <= 3 = "iload_" ++ show loc ++ "\n"
+  | otherwise = "iload " ++ show loc ++ "\n"
 
 compileBinExp :: Exp -> Exp -> String -> Compl Val
 compileBinExp e1 e2 s = do
