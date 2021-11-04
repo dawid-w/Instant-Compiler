@@ -26,33 +26,34 @@ type Loc = Int
 initEnv :: Env
 initEnv = Map.empty
 
-run :: Program -> String -> IO String
+run :: Program -> String -> IO (Either Error String)
 run program programName = do
   co <- runStateT (runExceptT (compileProgram program)) $ Map.insert (Ident "") 0 initEnv
   let localsLimit = max 1 $ Map.size (snd co)
   case fst co of
-    (Left e) -> return $ "Error" ++ e
+    (Left error) -> return $ Left error
     (Right r) ->
-      return
-        ( ".class public " ++ programName ++ "\n"
-            ++ ".super java/lang/Object\n"
-            ++ "; standard initializer\n"
-            ++ ".method public <init>()V\n"
-            ++ "    aload_0\n"
-            ++ "    invokespecial java/lang/Object/<init>()V\n"
-            ++ "    return\n"
-            ++ ".end method\n"
-            ++ ".method public static main([Ljava/lang/String;)V\n"
-            ++ ".limit stack "
-            ++ show (fst r)
-            ++ "\n"
-            ++ ".limit locals "
-            ++ show localsLimit
-            ++ "\n"
-            ++ snd r
-            ++ "return\n"
-            ++ ".end method\n"
-        )
+      return $
+        Right
+          ( ".class public " ++ programName ++ "\n"
+              ++ ".super java/lang/Object\n"
+              ++ "; standard initializer\n"
+              ++ ".method public <init>()V\n"
+              ++ "    aload_0\n"
+              ++ "    invokespecial java/lang/Object/<init>()V\n"
+              ++ "    return\n"
+              ++ ".end method\n"
+              ++ ".method public static main([Ljava/lang/String;)V\n"
+              ++ ".limit stack "
+              ++ show (fst r)
+              ++ "\n"
+              ++ ".limit locals "
+              ++ show localsLimit
+              ++ "\n"
+              ++ snd r
+              ++ "return\n"
+              ++ ".end method\n"
+          )
 
 compileProgram :: Program -> Compl Val
 compileProgram (Prog stmts) = compileStmts stmts
@@ -104,7 +105,9 @@ compileExp (ExpVar ident) = do
   env <- get
   case Map.lookup ident env of
     (Just loc) -> return (1, genLoadInstr loc)
-    Nothing -> throwError "No such ident"
+    Nothing -> do
+      let (Ident name) = ident
+      throwError $ "Unknown ident: " ++ name
 
 genLoadInstr :: Loc -> String
 genLoadInstr loc

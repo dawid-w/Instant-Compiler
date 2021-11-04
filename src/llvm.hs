@@ -25,11 +25,15 @@ main = do
       case pProgram tokens of
         Right program -> do
           result <- run program programName
-          writeFile (outputDir ++ "/" ++ programName ++ ".ll") result
-          processHandle <- runCommand ("llvm-as " ++ outputPath)
-          waitForProcess processHandle
-          putStrLn $ "Compiled: " ++ outputPath
-        Left err -> do
-          putStr ("Error while parsing:" ++ err)
+          case result of
+            (Right text) -> do
+              writeFile (outputDir ++ "/" ++ programName ++ ".ll") text
+              processHandle <- runCommand ("llvm-as " ++ outputPath)
+              waitForProcess processHandle
+              putStrLn $ "Compiled: " ++ outputPath
+            (Left error) -> do
+              putStrLn $ "Error:\n" ++ error
+        Left error -> do
+          putStr ("Error while parsing:\n" ++ error ++ "\n")
       return ()
     _ -> putStr "<Help>\n"

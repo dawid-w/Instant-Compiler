@@ -9,6 +9,7 @@ import JVMCompiler (run)
 import System.Environment (getArgs)
 import System.FilePath (dropExtension, replaceExtension, takeDirectory, takeFileName)
 import System.Process
+import Text.Parsec.Prim (putState)
 
 main :: IO ()
 main = do
@@ -25,11 +26,15 @@ main = do
       case pProgram tokens of
         Right program -> do
           result <- run program programName
-          writeFile (outputDir ++ "/" ++ programName ++ ".j") result
-          processHandle <- runCommand ("java -jar ./lib/jasmin.jar " ++ outputPath ++ " -d " ++ outputDir)
-          waitForProcess processHandle
-          putStrLn $ "Compiled: " ++ outputPath
-        Left err -> do
-          putStr ("Error while parsing:" ++ err)
+          case result of
+            (Right text) -> do
+              writeFile (outputDir ++ "/" ++ programName ++ ".j") text
+              processHandle <- runCommand ("java -jar ./lib/jasmin.jar " ++ outputPath ++ " -d " ++ outputDir)
+              waitForProcess processHandle
+              putStrLn $ "Compiled: " ++ outputPath
+            (Left error) -> do
+              putStrLn $ "Error:\n" ++ error
+        Left error -> do
+          putStr ("Error while parsing:\n" ++ error ++ "\n")
       return ()
     _ -> putStr "<Help>\n"

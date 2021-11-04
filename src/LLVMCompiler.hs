@@ -28,25 +28,26 @@ type Loc = Int
 initEnv :: Env
 initEnv = (Map.empty, 0)
 
-run :: Program -> String -> IO String
+run :: Program -> String -> IO (Either Error String)
 run program programName = do
   co <- runStateT (runExceptT (compileProgram program)) initEnv
   case fst co of
-    (Left e) -> return $ "Error" ++ e
+    (Left error) -> return $ Left error
     (Right r) ->
-      return
-        ( "@dnl = internal constant [4 x i8] c\"%d\\0A\\00\"\n"
-            ++ "declare i32 @printf(i8*, ...)\n"
-            ++ "define void @printInt(i32 %x) {\n"
-            ++ "%t0 = getelementptr [4 x i8], [4 x i8]* @dnl, i32 0, i32 0\n"
-            ++ "call i32 (i8*, ...) @printf(i8* %t0, i32 %x) \n"
-            ++ "ret void\n"
-            ++ "}\n"
-            ++ "define i32 @main() {\n"
-            ++ snd r
-            ++ "ret i32 0\n"
-            ++ "}\n"
-        )
+      return $
+        Right
+          ( "@dnl = internal constant [4 x i8] c\"%d\\0A\\00\"\n"
+              ++ "declare i32 @printf(i8*, ...)\n"
+              ++ "define void @printInt(i32 %x) {\n"
+              ++ "%t0 = getelementptr [4 x i8], [4 x i8]* @dnl, i32 0, i32 0\n"
+              ++ "call i32 (i8*, ...) @printf(i8* %t0, i32 %x) \n"
+              ++ "ret void\n"
+              ++ "}\n"
+              ++ "define i32 @main() {\n"
+              ++ snd r
+              ++ "ret i32 0\n"
+              ++ "}\n"
+          )
 
 compileProgram :: Program -> Compl Val
 compileProgram (Prog stmts) = compileStmts stmts
@@ -86,7 +87,9 @@ compileExp (ExpVar ident) = do
   let (Ident name) = ident
   case Map.lookup ident map of
     (Just loc) -> return (nextR, "%v" ++ show nextR ++ " = add i32 0, %v" ++ show loc ++ "\n")
-    Nothing -> throwError "No such ident"
+    Nothing -> do
+      let (Ident name) = ident
+      throwError $ "Unknown ident: " ++ name
 
 compileBinExp :: Exp -> Exp -> String -> Compl Val
 compileBinExp e1 e2 s = do
