@@ -2,12 +2,8 @@ module LLVMCompiler where
 
 import Control.Monad.Except
 import Control.Monad.State
-import Data.List.NonEmpty (inits)
 import Data.Map as Map
 import InstantParser.AbsInstant
-import InstantParser.LexInstant (Token (Err))
-import Text.Parsec (putState)
-import Text.Parsec.Prim (putState)
 
 type Env = (Map Ident Loc, Int)
 
