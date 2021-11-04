@@ -1,6 +1,5 @@
 ## Instant Compiler
-Ins to jvm/llvm compiler. 
-Ins (Instant) is a simple language consisted of expressions and assignments.
+**Instant** to **jvm/llvm** compiler. 
 
 ### Usage:
 ```
