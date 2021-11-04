@@ -1,4 +1,6 @@
 ## Instant Compiler
+Ins to jvm/llvm compiler. 
+Ins (Instant) is a simple language consisted of expressions and assignments.
 
 ### Usage:
 ```
