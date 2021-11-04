@@ -26,7 +26,7 @@ main = do
         Right program -> do
           result <- run program programName
           writeFile (outputDir ++ "/" ++ programName ++ ".j") result
-          processHandle <- runCommand ("java -jar  ./lib/jasmin-2.4/jasmin.jar " ++ outputPath ++ " -d " ++ outputDir)
+          processHandle <- runCommand ("java -jar ./lib/jasmin.jar " ++ outputPath ++ " -d " ++ outputDir)
           waitForProcess processHandle
           putStrLn $ "Compiled: " ++ outputPath
         Left err -> do

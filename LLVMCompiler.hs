@@ -79,7 +79,7 @@ compileExp (ExpLit num) = do
 compileExp (ExpAdd e1 e2) = compileBinExp e1 e2 "add"
 compileExp (ExpSub e1 e2) = compileBinExp e1 e2 "sub"
 compileExp (ExpMul e1 e2) = compileBinExp e1 e2 "mul"
-compileExp (ExpDiv e1 e2) = compileBinExp e1 e2 "div"
+compileExp (ExpDiv e1 e2) = compileBinExp e1 e2 "sdiv"
 compileExp (ExpVar ident) = do
   (map, nextR) <- get
   put (map, nextR + 1)
