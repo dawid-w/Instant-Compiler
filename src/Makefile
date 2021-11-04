@@ -7,5 +7,5 @@ insc_llvm: llvm.hs
 	ghc llvm.hs -o ../insc_llvm
 
 clean:
-	rm ./src/*.hi
-	rm ./src/*.o
+	rm -f ./*.hi
+	rm -f ./*.o
