@@ -15,7 +15,7 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    ["--help"] -> putStr "<Help>\n"
+    ["--help"] -> putStr helpString
     [filename] -> do
       code <- readFile filename
       let tokens = myLexer code
@@ -37,4 +37,7 @@ main = do
         Left error -> do
           putStr ("Error while parsing:\n" ++ error ++ "\n")
       return ()
-    _ -> putStr "<Help>\n"
+    _ -> putStr helpString
+
+helpString :: String
+helpString = "Usage:     ./insc_jvm <ins file path>\n"
