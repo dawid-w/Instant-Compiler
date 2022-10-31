@@ -114,5 +114,11 @@ compileBinExp :: Exp -> Exp -> String -> Compl Val
 compileBinExp e1 e2 s = do
   (stackSize1, result1) <- compileExp e1
   (stackSize2, result2) <- compileExp e2
-  -- Wykonuje pierwsza, zostawiam wynik (+1) wykonuje druga
-  return (max stackSize1 (stackSize2 + 1), result1 ++ result2 ++ s ++ "\n")
+  if stackSize1 < stackSize2
+    then return (stackSize2, result2 ++ result1 ++ genSwapOp s ++ s ++ "\n")
+    else return (max stackSize1 $ stackSize2 + 1, result1 ++ result2 ++ s ++ "\n")
+
+genSwapOp :: String -> String
+genSwapOp "isub" = "swap\n"
+genSwapOp "idiv" = "swap\n"
+genSwapOp _ = ""
